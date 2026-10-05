@@ -12,6 +12,14 @@ dist-ssr
 *.local
 *.env
 
+# Real seed data contains league member names — keep it local only.
+# The committed league.example.json (dummy data) documents the schema.
+server/seed-data/league.json
+
+# Internal agent/workflow planning docs (design, plans, reviews).
+# May reference real data; keep them out of the repo.
+.agents/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

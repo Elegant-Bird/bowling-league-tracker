@@ -8,6 +8,7 @@ import {
   results,
   leaderboards,
   stripMongoId,
+  withStringId,
 } from '../db.js'
 
 export const healthRouter = Router()
@@ -38,7 +39,7 @@ async function assembleLeague(): Promise<League | null> {
     teams: allTeams.map(stripMongoId),
     bowlers: allBowlers.map(stripMongoId),
     schedule: allSchedule.map(stripMongoId),
-    lastWeekResults: allResults.map(stripMongoId),
+    lastWeekResults: allResults.map(withStringId),
     leaderboards: allLeaderboards.map(stripMongoId),
   }
 }
@@ -80,7 +81,7 @@ leagueRouter.get('/schedule', async (_req: Request, res: Response) => {
 
 leagueRouter.get('/results', async (_req: Request, res: Response) => {
   const all = await results().find({}).toArray()
-  res.status(200).json(all.map(stripMongoId))
+  res.status(200).json(all.map(withStringId))
 })
 
 leagueRouter.get('/leaderboards', async (_req: Request, res: Response) => {

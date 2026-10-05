@@ -1,11 +1,38 @@
 import { Router, type Request, type Response } from 'express'
-import type { ScheduledMatch } from '@bowling/shared'
+import type { LaneAssignment, ScheduledMatch } from '@bowling/shared'
 import { schedule, stripMongoId } from '../db.js'
 import { requireAuth } from '../auth/middleware.js'
 
 export const scheduleRouter = Router()
 
 scheduleRouter.use(requireAuth)
+
+/**
+ * Validate the `lanes` field: an array of { lane: positive int, teamId:
+ * non-empty string }. Returns the parsed assignments or an error message.
+ */
+function validateLanes(
+  value: unknown,
+): { lanes: LaneAssignment[] } | { error: string } {
+  if (!Array.isArray(value)) {
+    return { error: 'lanes must be an array of { lane, teamId }' }
+  }
+  const lanes: LaneAssignment[] = []
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null) {
+      return { error: 'each lane assignment must be an object' }
+    }
+    const a = item as Record<string, unknown>
+    if (typeof a.lane !== 'number' || !Number.isInteger(a.lane) || a.lane <= 0) {
+      return { error: 'each lane assignment needs a positive integer lane' }
+    }
+    if (typeof a.teamId !== 'string' || a.teamId.trim() === '') {
+      return { error: 'each lane assignment needs a non-empty teamId' }
+    }
+    lanes.push({ lane: a.lane, teamId: a.teamId })
+  }
+  return { lanes }
+}
 
 function validateSchedule(
   body: unknown,
@@ -24,8 +51,14 @@ function validateSchedule(
   if (typeof b.format !== 'string' || b.format.trim() === '') {
     return { error: 'format is required and must be a non-empty string' }
   }
+  const lanesResult = validateLanes(b.lanes)
+  if ('error' in lanesResult) {
+    return { error: lanesResult.error }
+  }
 
-  return { entry: { week: b.week, date: b.date, format: b.format } }
+  return {
+    entry: { week: b.week, date: b.date, format: b.format, lanes: lanesResult.lanes },
+  }
 }
 
 scheduleRouter.post('/', async (req: Request, res: Response) => {
@@ -57,6 +90,14 @@ scheduleRouter.put('/:week', async (req: Request, res: Response) => {
   // week is the identity key — immutable via PUT, never taken from the body.
   if (typeof body.date === 'string') update.date = body.date
   if (typeof body.format === 'string') update.format = body.format
+  if (body.lanes !== undefined) {
+    const lanesResult = validateLanes(body.lanes)
+    if ('error' in lanesResult) {
+      res.status(400).json({ error: lanesResult.error })
+      return
+    }
+    update.lanes = lanesResult.lanes
+  }
 
   const updated = await schedule().findOneAndUpdate(
     { week },

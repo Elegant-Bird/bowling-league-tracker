@@ -1,0 +1,44 @@
+{
+  "_comment": "Example seed data with DUMMY names, illustrating the schema only. Real league data lives in league.json (gitignored) and in MongoDB. The seed script loads league.json if present, otherwise falls back to this file. Copy this to league.json and replace the values to seed a real dataset.",
+  "meta": {
+    "season": "Example Season 2099",
+    "currentWeek": 2,
+    "currentWeekDate": "2099-01-14",
+    "split": "Split 1 (Weeks 1 - 16)"
+  },
+  "bowlers": [
+    { "id": "b-alice-example", "name": "Alice Example", "gender": "F", "avg": 150, "entAvg": 145, "hdcp": 50, "gamesPlayed": 6, "pins": 900, "highGame": 180, "highSeries": 500 },
+    { "id": "b-bob-sample", "name": "Bob Sample", "gender": "M", "avg": 130, "entAvg": 128, "hdcp": 70, "gamesPlayed": 6, "pins": 780, "highGame": 160, "highSeries": 450 },
+    { "id": "b-vacant-aces", "name": "Vacant", "gender": "F", "avg": 120, "entAvg": 120, "hdcp": 80, "gamesPlayed": 0, "pins": 0, "highGame": 0, "highSeries": 0, "vacant": true },
+    { "id": "b-carol-placeholder", "name": "Carol Placeholder", "gender": "F", "avg": 140, "entAvg": 138, "hdcp": 60, "gamesPlayed": 6, "pins": 840, "highGame": 175, "highSeries": 470 },
+    { "id": "b-dave-demo", "name": "Dave Demo", "gender": "M", "avg": 125, "entAvg": 125, "hdcp": 74, "gamesPlayed": 6, "pins": 750, "highGame": 155, "highSeries": 420 }
+  ],
+  "teams": [
+    { "id": "t-1", "number": "1", "name": "The Example Aces", "lane": 1, "won": 6, "lost": 2, "teamHdcp": 10, "teamAvg": 400, "scratch": 2400, "total": 2460, "bowlerIds": ["b-alice-example", "b-bob-sample", "b-vacant-aces"] },
+    { "id": "t-2", "number": "2", "name": "Sample Strikers", "lane": 2, "won": 4, "lost": 4, "teamHdcp": 20, "teamAvg": 380, "scratch": 2280, "total": 2400, "bowlerIds": ["b-carol-placeholder", "b-dave-demo"] }
+  ],
+  "schedule": [
+    { "week": 3, "date": "2099-01-21", "format": "Normal", "lanes": [
+      { "lane": 1, "teamId": "t-1" },
+      { "lane": 2, "teamId": "t-2" }
+    ] },
+    { "week": 4, "date": "2099-01-28", "format": "Normal", "lanes": [
+      { "lane": 1, "teamId": "t-2" },
+      { "lane": 2, "teamId": "t-1" }
+    ] }
+  ],
+  "results": [
+    { "week": 1, "lanes": "1-2", "homeTeamId": "t-1", "awayTeamId": "t-2", "homeGames": [410, 420, 430], "homeSeries": 1260, "awayGames": [400, 405, 395], "awaySeries": 1200, "homePoints": 4, "awayPoints": 0 }
+  ],
+  "leaderboards": [
+    { "title": "High Average", "group": "Male", "entries": [{ "rank": 1, "bowlerName": "Bob Sample", "value": 130 }] },
+    { "title": "High Average", "group": "Female", "entries": [
+      { "rank": 1, "bowlerName": "Alice Example", "value": 150 },
+      { "rank": 2, "bowlerName": "Carol Placeholder", "value": 140 }
+    ] },
+    { "title": "High Series Handicap", "group": "Team", "entries": [
+      { "rank": 1, "teamName": "The Example Aces", "value": 1250 },
+      { "rank": 2, "teamName": "Sample Strikers", "value": 1200 }
+    ] }
+  ]
+}

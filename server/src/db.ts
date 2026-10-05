@@ -87,6 +87,18 @@ export function stripMongoId<T extends { _id?: ObjectId }>({
 }
 
 /**
+ * Like stripMongoId but surfaces the _id as a string `id` field. Used for
+ * results, which have no domain id of their own but must be addressable by the
+ * client for edit/delete.
+ */
+export function withStringId<T extends { _id?: ObjectId }>({
+  _id,
+  ...rest
+}: T): Omit<T, '_id'> & { id?: string } {
+  return _id ? { ...rest, id: _id.toHexString() } : rest
+}
+
+/**
  * Idempotent admin bootstrap — inserts the admin from ADMIN_USERNAME /
  * ADMIN_PASSWORD (bcrypt cost 12) only if no admin with that username exists.
  */

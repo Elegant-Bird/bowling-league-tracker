@@ -48,21 +48,30 @@ function validateResult(
       return { error: `${key} must be a number >= 0` }
     }
   }
-
-  return {
-    result: {
-      week: b.week,
-      lanes: b.lanes,
-      homeTeamId: b.homeTeamId,
-      awayTeamId: b.awayTeamId,
-      homeGames: b.homeGames,
-      homeSeries: b.homeSeries as number,
-      awayGames: b.awayGames,
-      awaySeries: b.awaySeries as number,
-      homePoints: b.homePoints as number,
-      awayPoints: b.awayPoints as number,
-    },
+  // Absent flags are optional booleans.
+  for (const key of ['homeAbsent', 'awayAbsent']) {
+    if (b[key] !== undefined && typeof b[key] !== 'boolean') {
+      return { error: `${key} must be a boolean when provided` }
+    }
   }
+
+  const result: MatchResult = {
+    week: b.week,
+    lanes: b.lanes,
+    homeTeamId: b.homeTeamId,
+    awayTeamId: b.awayTeamId,
+    homeGames: b.homeGames,
+    homeSeries: b.homeSeries as number,
+    awayGames: b.awayGames,
+    awaySeries: b.awaySeries as number,
+    homePoints: b.homePoints as number,
+    awayPoints: b.awayPoints as number,
+  }
+  // Only persist absent flags when true, to keep docs clean.
+  if (b.homeAbsent === true) result.homeAbsent = true
+  if (b.awayAbsent === true) result.awayAbsent = true
+
+  return { result }
 }
 
 resultsRouter.post('/', async (req: Request, res: Response) => {
@@ -95,6 +104,9 @@ resultsRouter.put('/:id', async (req: Request, res: Response) => {
   if (isNumberArrayGteZero(body.awayGames)) update.awayGames = body.awayGames
   for (const key of ['homeSeries', 'awaySeries', 'homePoints', 'awayPoints']) {
     if (typeof body[key] === 'number') update[key] = body[key]
+  }
+  for (const key of ['homeAbsent', 'awayAbsent']) {
+    if (typeof body[key] === 'boolean') update[key] = body[key]
   }
 
   const updated = await results().findOneAndUpdate(

@@ -1,7 +1,0 @@
-{
-  "task_id": "task-bowling-backend-2026-xx",
-  "task_description": "Build a MongoDB-backed Express API (server/) and refactor the React client to consume it, within the existing npm-workspaces monorepo. Server: env/secrets handling, Mongo singleton + typed collections + GridFS, JWT auth, public reads, protected CRUD writes with whitelist discipline, assembled GET /api/league, PDF reports via GridFS, idempotent seed with admin bootstrap. Client: @bowling/shared adoption, API client, Vite /api proxy, LeagueContext provider, real JWT AuthContext, migrate six pages + Layout, new Reports page/route, delete client/src/types.ts and client/src/data/league.ts. Follow design.md exactly; design-review.md findings are requirements.",
-  "status": "completed",
-  "feature_order": ["FEAT-001", "FEAT-002"],
-  "blocked_reason": null
-}

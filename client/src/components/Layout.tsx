@@ -33,6 +33,7 @@ const navItems = [
   { to: '/teams', label: 'Teams' },
   { to: '/leaderboards', label: 'Leaderboards' },
   { to: '/reports', label: 'Reports' },
+  { to: '/rules', label: 'Rules' },
 ]
 
 export default function Layout() {
