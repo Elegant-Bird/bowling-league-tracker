@@ -1,0 +1,5 @@
+/* Base styles live in the MUI theme + CssBaseline.
+   Kept minimal on purpose. */
+#root {
+  min-height: 100vh;
+}

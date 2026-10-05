@@ -1,0 +1,62 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "MEDIUM",
+      "where": "Environment Loading Strategy (src/env.ts), step 1 and Append format note",
+      "problem": "atlas-credentials.env stores all values double-quoted, including MONGODB_URI=\"mongodb+srv://...\". The design describes the URI as a bare string and never acknowledges the quotes. dotenv strips surrounding quotes so the runtime outcome is correct, but the load-bearing behavior is unstated, and the append logic's raw-file read will see the quotes.",
+      "fix": "State that values are double-quoted, dotenv strips them so config.mongoUri is the unquoted string passed to new MongoClient() as-is, and that the raw-file read used for append-detection must not be confused with the dotenv-parsed process.env values."
+    },
+    {
+      "id": 2,
+      "severity": "MEDIUM",
+      "where": "GET /api/league Assembly and Database Layer",
+      "problem": "stripMongoId is the function the entire 'returns the exact League shape' guarantee rests on, but it is given no signature. A non-generic or any-typed version compiles while defeating type safety or fails to type-check across TeamDoc/BowlerDoc.",
+      "fix": "Specify: function stripMongoId<T extends { _id?: ObjectId }>({ _id, ...rest }: T): Omit<T, '_id'> { return rest }, and note Omit<TeamDoc,'_id'> is structurally Team, etc., so League is satisfied without casts."
+    },
+    {
+      "id": 3,
+      "severity": "MEDIUM",
+      "where": "Reports Feature - Route (App.tsx)",
+      "problem": "Design says the /reports route is 'inside the <Layout> route', but App.tsx has no <Layout> wrapper element - Layout is a layout route with <Outlet/>. The phrasing could lead an implementer to wrap ReportsPage in a literal <Layout>, double-nesting the shell. Placement relative to the path='*' catch-all is also unstated.",
+      "fix": "Reword to: add <Route path='/reports' element={<ReportsPage />} /> as a child of the existing <Route element={<Layout />}> layout route next to the other page routes; order relative to path='*' is irrelevant in react-router v6."
+    },
+    {
+      "id": 4,
+      "severity": "MEDIUM",
+      "where": "LeagueContext / Provider and Page Updates",
+      "problem": "The main.tsx edit to mount the League provider is asserted but never shown, and the exported component name is never given (only the hook useLeague() and the vague 'LeagueProvider'/'the provider'). All seven consumers (six pages + Layout.tsx) must import these exact names.",
+      "fix": "Name the exports explicitly (LeagueProvider component, useLeague hook) and show the main.tsx edit nesting <LeagueProvider> inside <AuthProvider> around <App/>, so Layout (rendered inside App) is covered."
+    },
+    {
+      "id": 5,
+      "severity": "MEDIUM",
+      "where": "Write Endpoints - Results - POST /api/results",
+      "problem": "Validation omits rules for homeSeries, awaySeries, lanes, homeTeamId, awayTeamId, week, and the empty-array/zero-series case. Seed data has awaySeries: 0, single-element awayGames, and differing array lengths, so an implementer guessing 'non-empty arrays' or 'series equals sum of games' would reject valid rows.",
+      "fix": "Specify per field: week positive int; lanes non-empty string; home/awayTeamId non-empty strings; home/awayGames arrays of numbers >= 0 (may be empty); home/awaySeries numbers >= 0 (NOT required to equal sum of games); home/awayPoints numbers >= 0; differing array lengths allowed."
+    },
+    {
+      "id": 6,
+      "severity": "NIT",
+      "where": "Database Layer (src/db.ts) snippet",
+      "problem": "The snippet uses Collection<...>, Db, and GridFSBucket in return types but imports only ObjectId from mongodb; copied verbatim it does not compile.",
+      "fix": "Show the full import, e.g. import { ObjectId, GridFSBucket, type Collection, type Db } from 'mongodb'."
+    },
+    {
+      "id": 7,
+      "severity": "NIT",
+      "where": "API Client getReportUrl and Reports list anchor",
+      "problem": "The relative /api/reports/:id anchor href works in dev only via the Vite proxy and in prod via same-origin; an implementer might 'fix' it to an absolute localhost:4000 URL that breaks in production.",
+      "fix": "Add a sentence: the relative /api/reports/:id href is resolved by the Vite proxy in dev and same-origin server in prod; do not hardcode the backend host."
+    },
+    {
+      "id": 8,
+      "severity": "NIT",
+      "where": "AuthContext Rewrite - old key cleanup",
+      "problem": "Removing bowling-league.auth only when bowling-league.token is absent leaves a stale old-scheme object whenever a new token exists; the gating reads as a deliberate guard but is unnecessary.",
+      "fix": "Remove the old key unconditionally on first load; the new scheme never reads it."
+    }
+  ],
+  "reviewDoc": "/Users/tash/Projects/Elegant Bird/Bowling League/.agents/tasks/bowling-backend-2026-xx/design-review.md"
+}
