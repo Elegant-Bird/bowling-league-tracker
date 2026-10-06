@@ -30,3 +30,4 @@ server/seed-data/league.json
 *.njsproj
 *.sln
 *.sw?
+atlas-credentials.env

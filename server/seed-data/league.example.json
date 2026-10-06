@@ -4,6 +4,7 @@
     "season": "Example Season 2099",
     "currentWeek": 2,
     "currentWeekDate": "2099-01-14",
+    "startWeekDate": "2099-01-07",
     "split": "Split 1 (Weeks 1 - 16)"
   },
   "bowlers": [

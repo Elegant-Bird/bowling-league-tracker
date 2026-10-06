@@ -1,5 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
-import multer from 'multer'
+import multer, { type FileFilterCallback } from 'multer'
 import { ObjectId } from 'mongodb'
 import type { WeeklyReport } from '@bowling/shared'
 import { reportsMeta, getReportsBucket, type ReportMetaDoc } from '../db.js'
@@ -7,10 +7,12 @@ import { requireAuth } from '../auth/middleware.js'
 
 export const reportsRouter = Router()
 
+type MulterRequest = Request & { file?: Express.Multer.File }
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     if (file.mimetype === 'application/pdf') {
       cb(null, true)
     } else {
@@ -38,7 +40,7 @@ reportsRouter.post(
   '/',
   requireAuth,
   upload.single('file'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         res.status(400).json({ error: 'A PDF file is required' })

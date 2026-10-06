@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 import multer from 'multer'
@@ -38,18 +40,28 @@ async function main(): Promise<void> {
   app.use('/api/weeks', weeksRouter)
   app.use('/api/bowler-stats', bowlerStatsRouter)
 
+  // Serve the React client in production (Docker). The static files are placed
+  // at <workspace-root>/public by the Dockerfile, two levels above this file.
+  if (process.env.NODE_ENV === 'production') {
+    const __dirname = dirname(fileURLToPath(import.meta.url))
+    const clientDist = resolve(__dirname, '../../public')
+    app.use(express.static(clientDist))
+    app.get('*', (_req, res) => res.sendFile(resolve(clientDist, 'index.html')))
+  }
+
   // Global error handler. Owns MulterError status mapping; never logs secrets.
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
+      const merr = err as multer.MulterError
+      if (merr.code === 'LIMIT_FILE_SIZE') {
         res.status(413).json({ error: 'File too large (max 10 MB)' })
         return
       }
-      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      if (merr.code === 'LIMIT_UNEXPECTED_FILE') {
         res.status(400).json({ error: 'Unexpected file field' })
         return
       }
-      res.status(400).json({ error: err.message })
+      res.status(400).json({ error: merr.message })
       return
     }
     console.error('Unhandled error:', err instanceof Error ? err.message : 'unknown')
