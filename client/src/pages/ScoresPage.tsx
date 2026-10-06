@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import {
   Card,
@@ -10,12 +10,13 @@ import {
   TableRow,
   Chip,
   Box,
-  Typography,
   Link,
   Stack,
   Button,
   IconButton,
   Tooltip,
+  TextField,
+  MenuItem,
   CircularProgress,
   Alert,
 } from '@mui/material'
@@ -23,7 +24,14 @@ import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PersonOffIcon from '@mui/icons-material/PersonOff'
-import { computeMatchScoring, type MatchResult, type PointWinner } from '@bowling/shared'
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
+import {
+  computeMatchScoring,
+  type MatchResult,
+  type PointWinner,
+  type WeeklyReport,
+  type WeekInfo,
+} from '@bowling/shared'
 import { useLeague } from '../data/LeagueContext'
 import { useAuth } from '../auth/AuthContext'
 import * as api from '../api/client'
@@ -40,6 +48,16 @@ function wonSx(isWinner: boolean) {
 /** Render points as a compact number, showing halves (2, 0.5, 1.5…). */
 function formatPoints(p: number): string {
   return Number.isInteger(p) ? String(p) : p.toFixed(1)
+}
+
+/** Format an ISO date (YYYY-MM-DD) for display; empty → ''. */
+function formatDate(iso: string): string {
+  if (!iso) return ''
+  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 /** Build the API payload from the dialog form values. */
@@ -61,21 +79,85 @@ function toPayload(v: ResultFormValues): MatchResult {
 }
 
 export default function ScoresPage() {
-  const { league, loading, error, getTeamById, refresh } = useLeague()
+  const { league, loading: leagueLoading, error: leagueError, getTeamById } = useLeague()
   const { isAdmin } = useAuth()
+
+  // Week-scoped state (independent of the one-week league payload).
+  const [weeks, setWeeks] = useState<WeekInfo[]>([])
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
+  const [results, setResults] = useState<MatchResult[]>([])
+  const [reports, setReports] = useState<WeeklyReport[]>([])
+  const [weekLoading, setWeekLoading] = useState(true)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<MatchResult | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
-  if (loading) return <CircularProgress />
-  if (error) return <Alert severity="error">{error}</Alert>
+  // Load the list of weeks that have results (+ reports), defaulting the
+  // selection to the latest week. Keeps a valid selection if the set changes.
+  const loadWeeks = useCallback(async () => {
+    const [weekList, reportList] = await Promise.all([
+      api.fetchResultWeeks(),
+      api.fetchReports().catch(() => [] as WeeklyReport[]),
+    ])
+    setWeeks(weekList)
+    setReports(reportList)
+    setSelectedWeek((prev) => {
+      const weekNums = weekList.map((w) => w.week)
+      if (prev !== null && weekNums.includes(prev)) return prev
+      return weekNums.length ? weekNums[weekNums.length - 1] : null
+    })
+  }, [])
+
+  // Fetch the results for the currently selected week.
+  const loadResults = useCallback(async (week: number | null) => {
+    if (week === null) {
+      setResults([])
+      setWeekLoading(false)
+      return
+    }
+    setWeekLoading(true)
+    try {
+      const rows = await api.fetchResultsByWeek(week)
+      setResults(rows)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to load results.')
+      setResults([])
+    } finally {
+      setWeekLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadWeeks()
+  }, [loadWeeks])
+
+  useEffect(() => {
+    void loadResults(selectedWeek)
+  }, [selectedWeek, loadResults])
+
+  // After any admin mutation, refresh the week list and the current results.
+  const reloadAll = useCallback(async () => {
+    await loadWeeks()
+    await loadResults(selectedWeek)
+  }, [loadWeeks, loadResults, selectedWeek])
+
+  if (leagueLoading) return <CircularProgress />
+  if (leagueError) return <Alert severity="error">{leagueError}</Alert>
   if (!league) return null
 
   const teamLabel = (teamId: string): string => {
     const team = getTeamById(teamId)
     return team ? `${team.name} (#${team.number})` : teamId
   }
+
+  // The uploaded PDF report for the selected week, if one exists.
+  const weekReport =
+    selectedWeek !== null ? reports.find((r) => r.week === selectedWeek) : undefined
+
+  // Date for the selected week (from the normalized weeks collection).
+  const selectedWeekDate =
+    selectedWeek !== null ? (weeks.find((w) => w.week === selectedWeek)?.date ?? '') : ''
 
   const openAdd = () => {
     setEditing(null)
@@ -92,8 +174,26 @@ export default function ScoresPage() {
       await api.updateResult(editing.id, payload)
     } else {
       await api.createResult(payload)
+      // If this week has no recorded date yet, offer to set one so the
+      // history reads nicely. (Dates can also be edited later.)
+      const existing = weeks.find((w) => w.week === payload.week)
+      if (!existing || !existing.date) {
+        const entered = window.prompt(
+          `Date for Week ${payload.week}? (YYYY-MM-DD, optional)`,
+          '',
+        )
+        if (entered && entered.trim()) {
+          try {
+            await api.setWeekDate(payload.week, entered.trim())
+          } catch {
+            setActionError('Result saved, but the week date could not be set.')
+          }
+        }
+      }
+      // Jump to the week just created so the admin sees their entry.
+      setSelectedWeek(payload.week)
     }
-    refresh()
+    await reloadAll()
   }
 
   const handleDelete = async (r: MatchResult) => {
@@ -102,7 +202,7 @@ export default function ScoresPage() {
     setActionError(null)
     try {
       await api.deleteResult(r.id)
-      refresh()
+      await reloadAll()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Delete failed.')
     }
@@ -182,7 +282,6 @@ export default function ScoresPage() {
             }}
           >
             <Chip size="small" label={`Lanes ${r.lanes}`} color="primary" variant="outlined" />
-            <Typography variant="h3">Week {r.week}</Typography>
             {isAdmin && (
               <Box sx={{ ml: 'auto', display: 'flex', gap: 0.5 }}>
                 <Tooltip title="Edit result">
@@ -244,17 +343,55 @@ export default function ScoresPage() {
 
   return (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
         <PageHeader
-          title="Last Week's Scores"
-          subtitle="Match results from the previous week — highlighted cells show the point winner"
+          title="Scores"
+          subtitle={
+            selectedWeek !== null
+              ? `Week ${selectedWeek}${selectedWeekDate ? ` · ${formatDate(selectedWeekDate)}` : ''} — highlighted cells show the point winner`
+              : 'Match results by week — highlighted cells show the point winner'
+          }
         />
-        {isAdmin && (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd} sx={{ mt: 1 }}>
-            Add result
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1, flexWrap: 'wrap' }}>
+          {weeks.length > 0 && selectedWeek !== null && (
+            <TextField
+              select
+              size="small"
+              label="Week"
+              value={selectedWeek}
+              onChange={(e) => setSelectedWeek(Number(e.target.value))}
+              sx={{ minWidth: 200 }}
+            >
+              {weeks.map((w) => (
+                <MenuItem key={w.week} value={w.week}>
+                  Week {w.week}
+                  {w.date ? ` — ${formatDate(w.date)}` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+          {isAdmin && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd}>
+              Add result
+            </Button>
+          )}
+        </Box>
       </Box>
+
+      {weekReport && (
+        <Button
+          component="a"
+          href={api.getReportUrl(weekReport.id)}
+          target="_blank"
+          rel="noreferrer"
+          startIcon={<PictureAsPdfIcon />}
+          variant="outlined"
+          size="small"
+          sx={{ mb: 2 }}
+        >
+          View original sheet for Week {selectedWeek}
+        </Button>
+      )}
 
       {actionError && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setActionError(null)}>
@@ -262,9 +399,15 @@ export default function ScoresPage() {
         </Alert>
       )}
 
-      <Stack spacing={3}>
-        {league.lastWeekResults.map((r, idx) => renderMatch(r, idx))}
-      </Stack>
+      {weekLoading ? (
+        <CircularProgress />
+      ) : weeks.length === 0 ? (
+        <Alert severity="info">No scores have been entered yet.</Alert>
+      ) : results.length === 0 ? (
+        <Alert severity="info">No results for week {selectedWeek}.</Alert>
+      ) : (
+        <Stack spacing={3}>{results.map((r, idx) => renderMatch(r, idx))}</Stack>
+      )}
 
       <ResultFormDialog
         open={dialogOpen}

@@ -7,15 +7,19 @@ import type {
   MatchResult,
   Leaderboard,
   WeeklyReport,
+  WeekInfo,
+  BowlerWeekStats,
 } from '@bowling/shared'
 import { config } from './env.js'
 
 // Mongo document types — add _id, keep the domain id as a plain string field.
 export type TeamDoc = Team & { _id?: ObjectId }
 export type BowlerDoc = Bowler & { _id?: ObjectId }
+export type BowlerStatsDoc = BowlerWeekStats & { _id?: ObjectId }
 export type ScheduleDoc = ScheduledMatch & { _id?: ObjectId }
 export type ResultDoc = MatchResult & { _id?: ObjectId }
 export type LeaderboardDoc = Leaderboard & { _id?: ObjectId }
+export type WeekDoc = WeekInfo & { _id?: ObjectId }
 export type AdminDoc = { _id?: ObjectId; username: string; passwordHash: string }
 export type ReportMetaDoc = Omit<WeeklyReport, 'id'> & {
   _id?: ObjectId
@@ -56,6 +60,9 @@ export function teams(): Collection<TeamDoc> {
 export function bowlers(): Collection<BowlerDoc> {
   return getDb().collection<BowlerDoc>('bowlers')
 }
+export function bowlerStats(): Collection<BowlerStatsDoc> {
+  return getDb().collection<BowlerStatsDoc>('bowler_stats')
+}
 export function schedule(): Collection<ScheduleDoc> {
   return getDb().collection<ScheduleDoc>('schedule')
 }
@@ -70,6 +77,9 @@ export function admins(): Collection<AdminDoc> {
 }
 export function leagueMeta(): Collection<LeagueMetaDoc> {
   return getDb().collection<LeagueMetaDoc>('league_meta')
+}
+export function weeks(): Collection<WeekDoc> {
+  return getDb().collection<WeekDoc>('weeks')
 }
 export function reportsMeta(): Collection<ReportMetaDoc> {
   return getDb().collection<ReportMetaDoc>('reports_meta')
@@ -115,6 +125,8 @@ export async function bootstrapAdmin(): Promise<void> {
 export async function ensureIndexes(): Promise<void> {
   await teams().createIndex({ id: 1 }, { unique: true })
   await bowlers().createIndex({ id: 1 }, { unique: true })
+  await bowlerStats().createIndex({ bowlerId: 1, week: 1 }, { unique: true })
   await schedule().createIndex({ week: 1 }, { unique: true })
   await admins().createIndex({ username: 1 }, { unique: true })
+  await weeks().createIndex({ week: 1 }, { unique: true })
 }

@@ -5,23 +5,37 @@
 
 export type Gender = 'M' | 'F'
 
-/** A single person on a team's roster. */
+/**
+ * A person (or placeholder seat) on a roster — identity only. All numeric
+ * stats are cumulative-as-of-a-week and live in BowlerWeekStats, since the
+ * league reports a running snapshot each week rather than a single fixed set.
+ */
 export interface Bowler {
   id: string
   name: string
   gender: Gender
-  /** Current average. */
+  /** A placeholder/vacant roster slot rather than a real person. */
+  vacant?: boolean
+}
+
+/**
+ * A bowler's cumulative stats as of a given week, exactly as printed on that
+ * week's official report. Stored per (bowlerId, week); the app does not derive
+ * these — it stores the league's published numbers so they always match.
+ */
+export interface BowlerWeekStats {
+  bowlerId: string
+  week: number
+  /** Average as of this week. */
   avg: number
-  /** Entering average (season start). */
+  /** Entering average (season start; constant across weeks). */
   entAvg: number
-  /** Handicap. */
+  /** Handicap as of this week. */
   hdcp: number
   gamesPlayed: number
   pins: number
   highGame: number
   highSeries: number
-  /** A placeholder/vacant roster slot rather than a real person. */
-  vacant?: boolean
 }
 
 /** A team and its roster. */
@@ -117,6 +131,16 @@ export interface League {
   schedule: ScheduledMatch[]
   lastWeekResults: MatchResult[]
   leaderboards: Leaderboard[]
+}
+
+/**
+ * A league week and the date it was played. Stored once per week (normalized)
+ * rather than repeated on each match result, so a week's date never drifts.
+ */
+export interface WeekInfo {
+  week: number
+  /** ISO date the session was played, e.g. "2026-09-23". May be empty if unknown. */
+  date: string
 }
 
 /** Metadata for a stored weekly PDF report (the file lives in GridFS). */

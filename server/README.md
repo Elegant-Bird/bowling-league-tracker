@@ -32,7 +32,11 @@ Run from the repo root (workspace-aware) or inside `server/`:
 - `npm run build --workspace=server` — type-check and compile to `dist/` (`tsc -b`).
 - `npm run dev --workspace=server` — run with `tsx watch` (no build needed).
 - `npm run start --workspace=server` — run the compiled `dist/index.js`.
-- `npm run seed` (root) — drop and reseed all collections, bootstrap the admin.
+- `npm run seed` (root) — safe upsert: inserts/updates seeded records by their
+  natural key and bootstraps the admin. Does NOT delete anything, so data
+  entered through the admin UI is preserved. Run `npm run seed -- --reset` to
+  drop every collection and rebuild from scratch (destructive — only for a
+  clean slate).
 
 The shared package must be built first: `npm run build --workspace=shared`.
 

@@ -7,6 +7,8 @@ import type {
   ScheduledMatch,
   MatchResult,
   Leaderboard,
+  WeekInfo,
+  BowlerWeekStats,
 } from '@bowling/shared'
 import { config } from './env.js'
 import {
@@ -15,10 +17,12 @@ import {
   getDb,
   teams as teamsCol,
   bowlers as bowlersCol,
+  bowlerStats as bowlerStatsCol,
   schedule as scheduleCol,
   results as resultsCol,
   leaderboards as leaderboardsCol,
   leagueMeta as leagueMetaCol,
+  weeks as weeksCol,
   bootstrapAdmin,
 } from './db.js'
 
@@ -39,10 +43,13 @@ interface SeedFile {
     split: string
   }
   bowlers: Bowler[]
+  bowlerStats?: BowlerWeekStats[]
   teams: Team[]
   schedule: ScheduledMatch[]
   results: MatchResult[]
   leaderboards: Leaderboard[]
+  /** Week -> date map. Optional: derived from results when absent. */
+  weeks?: WeekInfo[]
 }
 
 const seedDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'seed-data')
@@ -63,47 +70,84 @@ function loadSeedData(): { data: SeedFile; source: string } {
   return { data, source: path === realPath ? 'league.json' : 'league.example.json (dummy data)' }
 }
 
+// Upsert every doc in `rows` into `col` by a natural key, so reseeding updates
+// seeded records in place and NEVER deletes data added through the app.
+async function upsertAll<T extends object>(
+  col: { updateOne: (f: object, u: object, o: object) => Promise<unknown> },
+  rows: T[],
+  key: (row: T) => Record<string, unknown>,
+): Promise<void> {
+  for (const row of rows) {
+    await col.updateOne(key(row), { $set: { ...row } }, { upsert: true })
+  }
+}
+
 async function seed(): Promise<void> {
   const { data, source } = loadSeedData()
-  console.log(`Seeding from ${source}.`)
+
+  // Destructive full rebuild only when explicitly requested with --reset.
+  // Default behavior is a safe, non-destructive upsert that preserves any
+  // data entered through the admin UI.
+  const reset = process.argv.includes('--reset')
+  console.log(
+    `Seeding from ${source} (${reset ? 'RESET: drop + reinsert' : 'safe upsert, no deletes'}).`,
+  )
 
   await connectDB(config.mongoUri)
   const db = getDb()
 
-  // Drop the seven seeded collections for a fully idempotent reseed.
-  for (const name of [
-    'league_meta',
-    'teams',
-    'bowlers',
-    'schedule',
-    'results',
-    'leaderboards',
-    'admins',
-  ]) {
-    await db
-      .collection(name)
-      .drop()
-      .catch(() => {
-        // Collection may not exist yet — ignore.
-      })
+  if (reset) {
+    for (const name of [
+      'league_meta',
+      'teams',
+      'bowlers',
+      'bowler_stats',
+      'schedule',
+      'results',
+      'leaderboards',
+      'admins',
+      'weeks',
+    ]) {
+      await db
+        .collection(name)
+        .drop()
+        .catch(() => {
+          // Collection may not exist yet — ignore.
+        })
+    }
   }
 
-  await leagueMetaCol().insertOne({ ...data.meta })
-  await teamsCol().insertMany(data.teams.map((t) => ({ ...t })))
-  await bowlersCol().insertMany(data.bowlers.map((b) => ({ ...b })))
-  await scheduleCol().insertMany(data.schedule.map((s) => ({ ...s })))
-  await resultsCol().insertMany(data.results.map((r) => ({ ...r })))
-  await leaderboardsCol().insertMany(
-    data.leaderboards.map((l) => ({ ...l })),
-    { ordered: true },
-  )
+  const statRows = data.bowlerStats ?? []
+
+  // Weeks: explicit entries from the JSON, else one (dateless) entry per
+  // distinct result week so the collection stays consistent.
+  const weekEntries: WeekInfo[] =
+    data.weeks && data.weeks.length > 0
+      ? data.weeks
+      : [...new Set(data.results.map((r) => r.week))]
+          .sort((a, b) => a - b)
+          .map((week) => ({ week, date: '' }))
+
+  // league_meta is a singleton: upsert the one doc.
+  await leagueMetaCol().updateOne({}, { $set: { ...data.meta } }, { upsert: true })
+
+  // Natural keys per collection — results keyed by (week, lanes), stats by
+  // (bowlerId, week), leaderboards by (title, group), the rest by their id/week.
+  await upsertAll(teamsCol(), data.teams, (t) => ({ id: t.id }))
+  await upsertAll(bowlersCol(), data.bowlers, (b) => ({ id: b.id }))
+  await upsertAll(bowlerStatsCol(), statRows, (s) => ({ bowlerId: s.bowlerId, week: s.week }))
+  await upsertAll(scheduleCol(), data.schedule, (s) => ({ week: s.week }))
+  await upsertAll(resultsCol(), data.results, (r) => ({ week: r.week, lanes: r.lanes }))
+  await upsertAll(leaderboardsCol(), data.leaderboards, (l) => ({ title: l.title, group: l.group }))
+  await upsertAll(weeksCol(), weekEntries, (w) => ({ week: w.week }))
 
   await bootstrapAdmin()
 
   console.log(
-    `Seeded: 1 league_meta, ${data.teams.length} teams, ${data.bowlers.length} bowlers, ` +
-      `${data.schedule.length} schedule, ${data.results.length} results, ` +
-      `${data.leaderboards.length} leaderboards.`,
+    `Seeded (upsert): 1 league_meta, ${data.teams.length} teams, ${data.bowlers.length} bowlers, ` +
+      `${statRows.length} bowler-stats, ${data.schedule.length} schedule, ` +
+      `${data.results.length} results, ${data.leaderboards.length} leaderboards, ` +
+      `${weekEntries.length} weeks.`,
   )
 
   await closeDB()

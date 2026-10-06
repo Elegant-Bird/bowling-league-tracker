@@ -12,6 +12,8 @@ import { resultsRouter } from './routes/results.js'
 import { leaderboardsRouter } from './routes/leaderboards.js'
 import { leagueMetaRouter } from './routes/leagueMeta.js'
 import { reportsRouter } from './routes/reports.js'
+import { weeksRouter } from './routes/weeks.js'
+import { bowlerStatsRouter } from './routes/bowlerStats.js'
 
 async function main(): Promise<void> {
   await connectDB(config.mongoUri)
@@ -33,6 +35,8 @@ async function main(): Promise<void> {
   app.use('/api/results', resultsRouter)
   app.use('/api/leaderboards', leaderboardsRouter)
   app.use('/api/reports', reportsRouter)
+  app.use('/api/weeks', weeksRouter)
+  app.use('/api/bowler-stats', bowlerStatsRouter)
 
   // Global error handler. Owns MulterError status mapping; never logs secrets.
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

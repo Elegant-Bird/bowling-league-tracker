@@ -7,11 +7,19 @@
     "split": "Split 1 (Weeks 1 - 16)"
   },
   "bowlers": [
-    { "id": "b-alice-example", "name": "Alice Example", "gender": "F", "avg": 150, "entAvg": 145, "hdcp": 50, "gamesPlayed": 6, "pins": 900, "highGame": 180, "highSeries": 500 },
-    { "id": "b-bob-sample", "name": "Bob Sample", "gender": "M", "avg": 130, "entAvg": 128, "hdcp": 70, "gamesPlayed": 6, "pins": 780, "highGame": 160, "highSeries": 450 },
-    { "id": "b-vacant-aces", "name": "Vacant", "gender": "F", "avg": 120, "entAvg": 120, "hdcp": 80, "gamesPlayed": 0, "pins": 0, "highGame": 0, "highSeries": 0, "vacant": true },
-    { "id": "b-carol-placeholder", "name": "Carol Placeholder", "gender": "F", "avg": 140, "entAvg": 138, "hdcp": 60, "gamesPlayed": 6, "pins": 840, "highGame": 175, "highSeries": 470 },
-    { "id": "b-dave-demo", "name": "Dave Demo", "gender": "M", "avg": 125, "entAvg": 125, "hdcp": 74, "gamesPlayed": 6, "pins": 750, "highGame": 155, "highSeries": 420 }
+    { "id": "b-alice-example", "name": "Alice Example", "gender": "F" },
+    { "id": "b-bob-sample", "name": "Bob Sample", "gender": "M" },
+    { "id": "b-vacant-aces", "name": "Vacant", "gender": "F", "vacant": true },
+    { "id": "b-carol-placeholder", "name": "Carol Placeholder", "gender": "F" },
+    { "id": "b-dave-demo", "name": "Dave Demo", "gender": "M" }
+  ],
+  "bowlerStats": [
+    { "bowlerId": "b-alice-example", "week": 1, "avg": 145, "entAvg": 145, "hdcp": 55, "gamesPlayed": 3, "pins": 450, "highGame": 170, "highSeries": 450 },
+    { "bowlerId": "b-alice-example", "week": 2, "avg": 150, "entAvg": 145, "hdcp": 50, "gamesPlayed": 6, "pins": 900, "highGame": 180, "highSeries": 500 },
+    { "bowlerId": "b-bob-sample", "week": 1, "avg": 128, "entAvg": 128, "hdcp": 72, "gamesPlayed": 3, "pins": 384, "highGame": 150, "highSeries": 384 },
+    { "bowlerId": "b-bob-sample", "week": 2, "avg": 130, "entAvg": 128, "hdcp": 70, "gamesPlayed": 6, "pins": 780, "highGame": 160, "highSeries": 450 },
+    { "bowlerId": "b-carol-placeholder", "week": 2, "avg": 140, "entAvg": 138, "hdcp": 60, "gamesPlayed": 6, "pins": 840, "highGame": 175, "highSeries": 470 },
+    { "bowlerId": "b-dave-demo", "week": 2, "avg": 125, "entAvg": 125, "hdcp": 74, "gamesPlayed": 6, "pins": 750, "highGame": 155, "highSeries": 420 }
   ],
   "teams": [
     { "id": "t-1", "number": "1", "name": "The Example Aces", "lane": 1, "won": 6, "lost": 2, "teamHdcp": 10, "teamAvg": 400, "scratch": 2400, "total": 2460, "bowlerIds": ["b-alice-example", "b-bob-sample", "b-vacant-aces"] },
@@ -29,6 +37,9 @@
   ],
   "results": [
     { "week": 1, "lanes": "1-2", "homeTeamId": "t-1", "awayTeamId": "t-2", "homeGames": [410, 420, 430], "homeSeries": 1260, "awayGames": [400, 405, 395], "awaySeries": 1200, "homePoints": 4, "awayPoints": 0 }
+  ],
+  "weeks": [
+    { "week": 1, "date": "2099-01-07" }
   ],
   "leaderboards": [
     { "title": "High Average", "group": "Male", "entries": [{ "rank": 1, "bowlerName": "Bob Sample", "value": 130 }] },

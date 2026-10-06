@@ -8,6 +8,8 @@ import type {
   ScheduledMatch,
   Team,
   WeeklyReport,
+  WeekInfo,
+  BowlerWeekStats,
 } from '@bowling/shared'
 
 // Thin API client for the Express backend. All endpoints live under /api,
@@ -74,12 +76,45 @@ export function fetchBowlers(): Promise<Bowler[]> {
   return request<Bowler[]>('/bowlers')
 }
 
+/** All bowlers' stat snapshots for a given week. */
+export function fetchBowlerStats(week: number): Promise<BowlerWeekStats[]> {
+  return request<BowlerWeekStats[]>(`/bowler-stats?week=${encodeURIComponent(week)}`)
+}
+
+/** Weeks that have at least one bowler-stat snapshot, each with its date. */
+export function fetchBowlerStatWeeks(): Promise<WeekInfo[]> {
+  return request<WeekInfo[]>('/bowler-stats/weeks')
+}
+
+/** One bowler's stat snapshots across all weeks (ascending). */
+export function fetchBowlerHistory(bowlerId: string): Promise<BowlerWeekStats[]> {
+  return request<BowlerWeekStats[]>(`/bowlers/${encodeURIComponent(bowlerId)}/stats`)
+}
+
 export function fetchSchedule(): Promise<ScheduledMatch[]> {
   return request<ScheduledMatch[]>('/schedule')
 }
 
 export function fetchResults(): Promise<MatchResult[]> {
   return request<MatchResult[]>('/results')
+}
+
+/** Results for a single week. */
+export function fetchResultsByWeek(week: number): Promise<MatchResult[]> {
+  return request<MatchResult[]>(`/results?week=${encodeURIComponent(week)}`)
+}
+
+/** Sorted list of weeks that have at least one result, each with its date. */
+export function fetchResultWeeks(): Promise<WeekInfo[]> {
+  return request<WeekInfo[]>('/results/weeks')
+}
+
+/** Set (or clear) the date for a week. */
+export function setWeekDate(week: number, date: string): Promise<WeekInfo> {
+  return request<WeekInfo>(`/weeks/${week}`, {
+    method: 'PUT',
+    body: JSON.stringify({ date }),
+  })
 }
 
 export function fetchLeaderboards(): Promise<Leaderboard[]> {
@@ -125,6 +160,33 @@ export function updateBowler(id: string, bowler: Partial<Bowler>): Promise<Bowle
 
 export function deleteBowler(id: string): Promise<void> {
   return request<void>(`/bowlers/${id}`, { method: 'DELETE' })
+}
+
+// --- Protected writes: bowler weekly stats --------------------------------
+
+export function createBowlerStats(stats: BowlerWeekStats): Promise<BowlerWeekStats> {
+  return request<BowlerWeekStats>('/bowler-stats', {
+    method: 'POST',
+    body: JSON.stringify(stats),
+  })
+}
+
+export function updateBowlerStats(
+  bowlerId: string,
+  week: number,
+  stats: Partial<BowlerWeekStats>,
+): Promise<BowlerWeekStats> {
+  return request<BowlerWeekStats>(
+    `/bowler-stats/${encodeURIComponent(bowlerId)}/${week}`,
+    { method: 'PUT', body: JSON.stringify(stats) },
+  )
+}
+
+export function deleteBowlerStats(bowlerId: string, week: number): Promise<void> {
+  return request<void>(
+    `/bowler-stats/${encodeURIComponent(bowlerId)}/${week}`,
+    { method: 'DELETE' },
+  )
 }
 
 // --- Protected writes: schedule -------------------------------------------

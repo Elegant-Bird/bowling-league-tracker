@@ -1,22 +1,13 @@
 import { Router, type Request, type Response } from 'express'
 import type { Bowler, Gender } from '@bowling/shared'
-import { bowlers, stripMongoId } from '../db.js'
+import { bowlers, bowlerStats, stripMongoId } from '../db.js'
 import { requireAuth } from '../auth/middleware.js'
 
 export const bowlersRouter = Router()
 
 bowlersRouter.use(requireAuth)
 
-const NUMERIC_FIELDS = [
-  'avg',
-  'entAvg',
-  'hdcp',
-  'gamesPlayed',
-  'pins',
-  'highGame',
-  'highSeries',
-] as const
-
+// Bowler is identity-only now; cumulative stats live in bowler_stats per week.
 function validateBowler(body: unknown): { bowler: Bowler } | { error: string } {
   if (typeof body !== 'object' || body === null) {
     return { error: 'Request body must be a JSON object' }
@@ -32,12 +23,6 @@ function validateBowler(body: unknown): { bowler: Bowler } | { error: string } {
   if (b.gender !== 'M' && b.gender !== 'F') {
     return { error: 'gender must be "M" or "F"' }
   }
-  for (const key of NUMERIC_FIELDS) {
-    const v = b[key]
-    if (typeof v !== 'number' || v < 0) {
-      return { error: `${key} must be a number >= 0` }
-    }
-  }
   if (b.vacant !== undefined && typeof b.vacant !== 'boolean') {
     return { error: 'vacant must be a boolean when present' }
   }
@@ -46,13 +31,6 @@ function validateBowler(body: unknown): { bowler: Bowler } | { error: string } {
     id: b.id,
     name: b.name,
     gender: b.gender as Gender,
-    avg: b.avg as number,
-    entAvg: b.entAvg as number,
-    hdcp: b.hdcp as number,
-    gamesPlayed: b.gamesPlayed as number,
-    pins: b.pins as number,
-    highGame: b.highGame as number,
-    highSeries: b.highSeries as number,
   }
   if (b.vacant === true) bowler.vacant = true
 
@@ -82,9 +60,6 @@ bowlersRouter.put('/:id', async (req: Request, res: Response) => {
 
   if (typeof body.name === 'string') update.name = body.name
   if (body.gender === 'M' || body.gender === 'F') update.gender = body.gender
-  for (const key of NUMERIC_FIELDS) {
-    if (typeof body[key] === 'number') update[key] = body[key]
-  }
   if (typeof body.vacant === 'boolean') update.vacant = body.vacant
 
   const updated = await bowlers().findOneAndUpdate(
@@ -105,5 +80,7 @@ bowlersRouter.delete('/:id', async (req: Request, res: Response) => {
     res.status(404).json({ error: 'Bowler not found' })
     return
   }
+  // Also remove this bowler's weekly stat snapshots so none are orphaned.
+  await bowlerStats().deleteMany({ bowlerId: req.params.id })
   res.status(204).end()
 })

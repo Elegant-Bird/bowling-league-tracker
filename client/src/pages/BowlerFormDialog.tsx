@@ -15,17 +15,12 @@ import {
 } from '@mui/material'
 import type { Bowler, Gender } from '@bowling/shared'
 
+// A bowler is identity-only now (id, name, gender, vacant). Weekly cumulative
+// stats are edited separately per week (see BowlerStatsFormDialog).
 export interface BowlerFormValues {
   id: string
   name: string
   gender: Gender
-  avg: number
-  entAvg: number
-  hdcp: number
-  gamesPlayed: number
-  pins: number
-  highGame: number
-  highSeries: number
   vacant: boolean
 }
 
@@ -33,13 +28,6 @@ const EMPTY: BowlerFormValues = {
   id: '',
   name: '',
   gender: 'M',
-  avg: 0,
-  entAvg: 0,
-  hdcp: 0,
-  gamesPlayed: 0,
-  pins: 0,
-  highGame: 0,
-  highSeries: 0,
   vacant: false,
 }
 
@@ -48,13 +36,6 @@ function toForm(b: Bowler): BowlerFormValues {
     id: b.id,
     name: b.name,
     gender: b.gender,
-    avg: b.avg,
-    entAvg: b.entAvg,
-    hdcp: b.hdcp,
-    gamesPlayed: b.gamesPlayed,
-    pins: b.pins,
-    highGame: b.highGame,
-    highSeries: b.highSeries,
     vacant: b.vacant ?? false,
   }
 }
@@ -66,17 +47,6 @@ interface Props {
   onClose: () => void
   onSubmit: (values: BowlerFormValues) => Promise<void>
 }
-
-/** The seven numeric roster stats, with display labels. */
-const NUMBER_FIELDS: { key: keyof BowlerFormValues; label: string }[] = [
-  { key: 'avg', label: 'Avg' },
-  { key: 'entAvg', label: 'Ent Avg' },
-  { key: 'hdcp', label: 'Hdcp' },
-  { key: 'gamesPlayed', label: 'Games' },
-  { key: 'pins', label: 'Pins' },
-  { key: 'highGame', label: 'High Game' },
-  { key: 'highSeries', label: 'High Series' },
-]
 
 export default function BowlerFormDialog({ open, initial, onClose, onSubmit }: Props) {
   const [values, setValues] = useState<BowlerFormValues>(EMPTY)
@@ -94,12 +64,6 @@ export default function BowlerFormDialog({ open, initial, onClose, onSubmit }: P
   const set = <K extends keyof BowlerFormValues>(key: K, v: BowlerFormValues[K]) =>
     setValues((prev) => ({ ...prev, [key]: v }))
 
-  // Parse an <input type="number"> string value into a number (empty → 0).
-  const numField = (v: string): number => {
-    const n = Number(v)
-    return Number.isNaN(n) ? 0 : n
-  }
-
   async function handleSubmit() {
     setError(null)
     if (!values.id.trim()) {
@@ -108,11 +72,6 @@ export default function BowlerFormDialog({ open, initial, onClose, onSubmit }: P
     }
     if (!values.name.trim()) {
       setError('Name is required.')
-      return
-    }
-    const numericValues = NUMBER_FIELDS.map((f) => values[f.key] as number)
-    if (numericValues.some((n) => n < 0)) {
-      setError('Numeric values cannot be negative.')
       return
     }
     setBusy(true)
@@ -161,19 +120,6 @@ export default function BowlerFormDialog({ open, initial, onClose, onSubmit }: P
             <MenuItem value="M">M</MenuItem>
             <MenuItem value="F">F</MenuItem>
           </TextField>
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            {NUMBER_FIELDS.map((f) => (
-              <TextField
-                key={f.key}
-                label={f.label}
-                type="number"
-                size="small"
-                value={values[f.key] as number}
-                onChange={(e) => set(f.key, numField(e.target.value) as never)}
-                sx={{ width: 110 }}
-              />
-            ))}
-          </Box>
           <FormControlLabel
             control={
               <Checkbox
@@ -183,6 +129,10 @@ export default function BowlerFormDialog({ open, initial, onClose, onSubmit }: P
             }
             label="Vacant roster slot"
           />
+          <Alert severity="info" variant="outlined">
+            Weekly stats (average, pins, high game, etc.) are edited per week
+            from the roster's stat controls, not here.
+          </Alert>
         </Stack>
       </DialogContent>
       <DialogActions>
