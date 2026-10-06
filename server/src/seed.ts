@@ -40,6 +40,7 @@ interface SeedFile {
     season: string
     currentWeek: number
     currentWeekDate: string
+    startWeekDate: string
     split: string
   }
   bowlers: Bowler[]

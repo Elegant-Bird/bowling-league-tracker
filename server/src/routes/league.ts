@@ -46,6 +46,7 @@ async function assembleLeague(): Promise<League | null> {
     season: meta.season,
     currentWeek: meta.currentWeek,
     currentWeekDate: meta.currentWeekDate,
+    startWeekDate: meta.startWeekDate,
     split: meta.split,
     teams: allTeams.map(stripMongoId),
     bowlers: allBowlers.map(stripMongoId),

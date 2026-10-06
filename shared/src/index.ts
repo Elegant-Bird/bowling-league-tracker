@@ -125,6 +125,7 @@ export interface League {
   season: string // "2026 Lakers"
   currentWeek: number
   currentWeekDate: string
+  startWeekDate: string
   split: string // "Split 1 (Weeks 1 - 16)"
   teams: Team[]
   bowlers: Bowler[]

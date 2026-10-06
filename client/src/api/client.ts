@@ -229,6 +229,7 @@ export function putLeagueMeta(meta: {
   season: string
   currentWeek: number
   currentWeekDate: string
+  startWeekDate: string
   split: string
 }): Promise<unknown> {
   return request('/league/meta', { method: 'PUT', body: JSON.stringify(meta) })

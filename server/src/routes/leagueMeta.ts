@@ -25,6 +25,10 @@ leagueMetaRouter.put('/meta', async (req: Request, res: Response) => {
     res.status(400).json({ error: 'currentWeekDate is required and must be a non-empty string' })
     return
   }
+  if (typeof b.startWeekDate !== 'string' || b.startWeekDate.trim() === '') {
+    res.status(400).json({ error: 'startWeekDate is required and must be a non-empty string' })
+    return
+  }
   if (typeof b.split !== 'string' || b.split.trim() === '') {
     res.status(400).json({ error: 'split is required and must be a non-empty string' })
     return
@@ -35,6 +39,7 @@ leagueMetaRouter.put('/meta', async (req: Request, res: Response) => {
     season: b.season,
     currentWeek: b.currentWeek,
     currentWeekDate: b.currentWeekDate,
+    startWeekDate: b.startWeekDate,
     split: b.split,
   }
 

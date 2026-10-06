@@ -31,6 +31,7 @@ export interface LeagueMetaDoc {
   season: string
   currentWeek: number
   currentWeekDate: string
+  startWeekDate: string
   split: string
 }
 
