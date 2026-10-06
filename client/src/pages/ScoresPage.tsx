@@ -41,7 +41,7 @@ import ResultFormDialog, { type ResultFormValues } from './ResultFormDialog'
 /** Cell background when this side won the point (game or series). */
 function wonSx(isWinner: boolean) {
   return isWinner
-    ? { bgcolor: 'success.main', color: 'success.contrastText', fontWeight: 700, borderRadius: 1 }
+    ? { bgcolor: 'success.main', color: 'success.contrastText', fontWeight: 700 }
     : {}
 }
 
@@ -244,12 +244,12 @@ export default function ScoresPage() {
         </Box>
       </TableCell>
       {games.map((g, i) => (
-        <TableCell key={i} align="center" sx={wonSx(gameWinners[i] === side)}>
-          {g}
+        <TableCell key={i} align="center">
+          <Chip sx={wonSx(gameWinners[i] === side)} label={g}></Chip>
         </TableCell>
       ))}
-      <TableCell align="center" sx={wonSx(seriesWinner === side)}>
-        {series}
+      <TableCell align="center">
+        <Chip sx={wonSx(seriesWinner === side)} label={series}></Chip>
       </TableCell>
       <TableCell align="center">
         <Chip
